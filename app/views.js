@@ -1,371 +1,357 @@
-// views.js — hash router and one renderer per page. Every control on the
-// site is wired here: chart ranges, chart type, sortable tables, the
-// province selector, the indicator search and the CSV download.
+// NusaData — page views. Each view returns the page's HTML; the router in
+// main.js mounts it and wires the controls. All figures come from data.js.
 
 import {
-  AGE_GROUPS,
-  CENSUS_TOTAL,
-  EXPENDITURE,
-  GDP_GROWTH,
-  HERO,
-  INDICATORS,
-  INFLATION,
-  POVERTY,
-  PROVINCES,
-  RELEASES,
-  SITE,
-  TRADE,
-  UNEMPLOYMENT,
-} from "./data.js";
-import { barChart, lineChart, shareBars } from "./charts.js";
+  YEARS, HEADLINES, SERIES, SECTORS, MONTHLY_INFLATION_2024, CPI_BASKET,
+  AGE_GROUPS, PROVINCES, EMPLOYMENT, TRADE, HUMAN_DEV, RELEASES, SOURCES,
+  density, fmt,
+} from './data.js';
+import { barChart, lineChart, donutChart, pyramidChart, hbarChart } from './charts.js';
 
-const mount = document.getElementById("view");
-const navLinks = Array.from(document.querySelectorAll("nav.mainnav a"));
-
-// Page state, kept across re-renders within one visit.
-let econFrom = 2019;
-let priceChart = "bar";
-let provinceSort = { key: "population", dir: -1 };
-let selectedProvince = "Jawa Barat";
-let indicatorQuery = "";
-
-function sourceLine(source) {
-  return `<p class="source">Sumber: ${source}.</p>`;
+function kpiCards() {
+  return `<div class="kpi-grid">${HEADLINES.map((k) => `
+    <div class="kpi">
+      <div class="k-label">${k.label}</div>
+      <div class="k-value">${k.value}</div>
+      <div class="k-change">${k.change}</div>
+      <div class="k-note">${k.note}</div>
+      <div class="k-source">Source: ${k.source}</div>
+    </div>`).join('')}
+  </div>`;
 }
 
-function statCards(cards) {
-  return `<div class="cards">${cards
-    .map(
-      (c) =>
-        `<div class="card"><div class="label">${c.label}</div>` +
-        `<div class="value">${c.value}</div><div class="detail">${c.detail}</div>` +
-        `<div class="src">Sumber: ${c.source}</div></div>`,
-    )
-    .join("")}</div>`;
+function releaseList() {
+  return `<ul class="release-list">${RELEASES.map((r) => `
+    <li><span class="r-date">${r.date}</span><span class="r-topic">${r.topic}</span><span>${r.title}</span></li>`).join('')}
+  </ul>`;
 }
 
-function route() {
-  const hash = window.location.hash.replace(/^#\/?/, "");
-  return hash.split("/")[0] || "";
-}
-
-function setActiveNav(current) {
-  for (const a of navLinks) {
-    const target = a.getAttribute("href").replace(/^#\/?/, "");
-    a.classList.toggle("active", target === current);
-  }
-}
-
-function gdpPoints(fromYear) {
-  return GDP_GROWTH.filter((p) => p.year >= fromYear).map((p) => ({
-    label: String(p.year),
-    value: p.value,
-  }));
-}
-
-function renderOverview() {
-  const releases = RELEASES.map(
-    (r) =>
-      `<li><div class="date">${r.date} · ${r.source}</div>` +
-      `<div class="title">${r.title}</div><div class="detail">${r.detail}</div></li>`,
-  ).join("");
+export function overviewPage() {
+  const top5 = [...PROVINCES].sort((a, b) => b.pop - a.pop).slice(0, 5);
   return `
-    <p class="kicker">Beranda · Home</p>
-    <h1>Indonesia dalam angka</h1>
-    <p class="lede">Enam angka utama, grafik pertumbuhan, dan rilis terbaru dari
-    ${SITE.office} — semua angka di halaman ini disertai sumber dan tahunnya.</p>
-    ${statCards(HERO)}
-    <div class="panel">
-      <h2>Pertumbuhan ekonomi 2019–2024</h2>
-      ${barChart(gdpPoints(2019), { label: "Pertumbuhan PDB 2019–2024, persen per tahun" })}
-      ${sourceLine("BPS, pertumbuhan PDB y-on-y")}
-    </div>
-    <div class="panel">
-      <h2>Rilis terbaru</h2>
-      <ul class="releases">${releases}</ul>
-    </div>
-    <div class="panel">
-      <h2>Jelajahi data</h2>
-      <div class="quicklinks">
-        <a href="#/ekonomi"><strong>Ekonomi</strong><span>PDB, pengeluaran, dan perdagangan 2024.</span></a>
-        <a href="#/penduduk"><strong>Penduduk</strong><span>Sepuluh provinsi terbesar dan struktur umur.</span></a>
-        <a href="#/harga-tenaga-kerja"><strong>Harga &amp; Tenaga Kerja</strong><span>Inflasi, pengangguran, dan kemiskinan.</span></a>
-        <a href="#/data"><strong>Data &amp; Metode</strong><span>Semua indikator, cari, dan unduh CSV.</span></a>
-      </div>
-    </div>`;
+  <section class="hero">
+    <h1>Indonesia in numbers</h1>
+    <p>The national statistics portal: population, economy, prices, labour and trade —
+       the figures people look up, with the source and year on every number.</p>
+    <div class="updated">Updated 3 November 2026 · Next release: Consumer Price Index, 1 December 2026</div>
+  </section>
+  ${kpiCards()}
+  <div class="grid-2">
+    <section class="card">
+      <p class="chart-title">Population, 2015–2024</p>
+      <p class="chart-sub">Million people · ${SOURCES.population}</p>
+      ${barChart(YEARS.map(String), SERIES.population.values, { label: 'Population by year', highlight: 9 })}
+    </section>
+    <section class="card">
+      <p class="chart-title">Real GDP growth, 2015–2024</p>
+      <p class="chart-sub">% year on year · ${SOURCES.gdp}</p>
+      ${lineChart(YEARS.map(String), SERIES.gdpGrowth.values, { label: 'GDP growth by year' })}
+    </section>
+  </div>
+  <div class="grid-2">
+    <section class="card">
+      <h2>Latest releases</h2>
+      ${releaseList()}
+    </section>
+    <section class="card">
+      <h2>Largest provinces, 2024</h2>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Province</th><th class="num">Population (m)</th><th class="num">Density /km²</th></tr></thead>
+        <tbody>${top5.map((p) => `<tr><td>${p.name}</td><td class="num">${fmt(p.pop)}</td><td class="num">${density(p).toLocaleString('en-US')}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <p class="table-note">Three provinces hold over 45% of the population. <a href="#/population">See all provinces →</a></p>
+    </section>
+  </div>
+  <h2>Explore the statistics</h2>
+  <div class="explore-grid">
+    <a class="explore-card" href="#/population"><h3>Population</h3><p>Age structure, provinces, density and growth.</p></a>
+    <a class="explore-card" href="#/economy"><h3>Economy</h3><p>GDP, growth, sectors and foreign trade.</p></a>
+    <a class="explore-card" href="#/prices"><h3>Prices</h3><p>Inflation, monthly CPI and the CPI basket.</p></a>
+    <a class="explore-card" href="#/labour"><h3>Labour</h3><p>Unemployment, employment by sector and the labour force.</p></a>
+    <a class="explore-card" href="#/data"><h3>Data explorer</h3><p>Search, sort and download the provincial dataset.</p></a>
+    <a class="explore-card" href="#/about"><h3>Methods &amp; sources</h3><p>How the figures are compiled and where they come from.</p></a>
+  </div>`;
 }
 
-function renderEconomy() {
-  const trade = statCards(TRADE);
-  return `
-    <p class="kicker">Ekonomi · Economy</p>
-    <h1>Ekonomi Indonesia</h1>
-    <p class="lede">PDB 2024 sebesar Rp22.139 triliun dan tumbuh 5,03% — pertumbuhan
-    ditopang konsumsi rumah tangga dan investasi.</p>
-    <div class="panel">
-      <h2>Pertumbuhan PDB</h2>
-      <div class="controls" role="group" aria-label="Rentang tahun">
-        <span class="ctl-label">Rentang:</span>
-        <button type="button" data-range="2019" class="${econFrom === 2019 ? "on" : ""}">2019–2024</button>
-        <button type="button" data-range="2021" class="${econFrom === 2021 ? "on" : ""}">2021–2024</button>
-      </div>
-      ${barChart(gdpPoints(econFrom), { label: "Pertumbuhan PDB, persen per tahun" })}
-      ${sourceLine("BPS, pertumbuhan PDB y-on-y")}
-      <p class="note">Tahun 2020 mencatat kontraksi −2,07% saat pandemi Covid-19;
-      sejak 2022 pertumbuhan kembali di atas 5% setiap tahun.</p>
-    </div>
-    <div class="panel">
-      <h2>PDB menurut pengeluaran, 2024</h2>
-      ${shareBars(EXPENDITURE, { label: "Pangsa komponen PDB 2024" })}
-      ${sourceLine("BPS, 2024. Sisa 7,4% adalah konsumsi LNPRT, perubahan inventori, dan diskrepansi statistik")}
-    </div>
-    <div class="panel">
-      <h2>Perdagangan luar negeri</h2>
-      ${trade}
-    </div>`;
+function provinceRows(list) {
+  return list.map((p) => `<tr>
+    <td>${p.name}</td><td class="num">${fmt(p.pop)}</td>
+    <td class="num">${p.area.toLocaleString('en-US')}</td>
+    <td class="num">${density(p).toLocaleString('en-US')}</td>
+    <td class="num">+${fmt(p.growth)}%</td></tr>`).join('');
 }
 
-function provinceShare(p) {
-  return (p.population / CENSUS_TOTAL) * 100;
-}
-
-function sortedProvinces() {
-  const rows = [...PROVINCES];
-  const { key, dir } = provinceSort;
-  rows.sort((a, b) => {
-    if (key === "name") return dir * a.name.localeCompare(b.name, "id");
-    if (key === "population") return dir * (a.population - b.population);
-    return dir * (provinceShare(a) - provinceShare(b));
+export function populationPage(state) {
+  const q = (state.provinceQuery || '').toLowerCase();
+  let list = PROVINCES.filter((p) => p.name.toLowerCase().includes(q));
+  const key = state.provinceSort || 'pop';
+  const dir = state.provinceDir || -1;
+  list = [...list].sort((a, b) => {
+    const av = key === 'density' ? density(a) : a[key];
+    const bv = key === 'density' ? density(b) : b[key];
+    return (typeof av === 'string' ? av.localeCompare(bv) : av - bv) * dir;
   });
-  return rows;
-}
-
-function renderPopulation() {
-  const rows = sortedProvinces()
-    .map(
-      (p, i) =>
-        `<tr><td>${i + 1}</td><td>${p.name}</td><td>${p.capital}</td>` +
-        `<td class="num">${String(p.population).replace(".", ",")}</td>` +
-        `<td class="num">${String(Math.round(provinceShare(p) * 10) / 10).replace(".", ",")}%</td></tr>`,
-    )
-    .join("");
-  const arrow = (key) =>
-    provinceSort.key === key ? (provinceSort.dir === 1 ? " ▲" : " ▼") : "";
-  const selected = PROVINCES.find((p) => p.name === selectedProvince) || PROVINCES[0];
-  const options = PROVINCES.map(
-    (p) => `<option value="${p.name}"${p.name === selectedProvince ? " selected" : ""}>${p.name}</option>`,
-  ).join("");
-  const age = AGE_GROUPS.map(
-    (g) =>
-      `<div class="agebar"><span>${g.group}</span>` +
-      `<span class="share-track"><span class="share-fill" style="width:${g.share.toFixed(1)}%"></span></span>` +
-      `<span><strong>${String(g.share).replace(".", ",")}%</strong> · ${String(g.millions).replace(".", ",")} jt jiwa</span></div>`,
-  ).join("");
+  const sortBtn = (col, label) =>
+    `<button data-sort="${col}" aria-label="Sort by ${label}">${label} ${state.provinceSort === col ? (state.provinceDir === 1 ? '▲' : '▼') : ''}</button>`;
   return `
-    <p class="kicker">Penduduk · Population</p>
-    <h1>Penduduk Indonesia</h1>
-    <p class="lede">Sensus Penduduk 2020 mencatat 270,20 juta jiwa. Lebih dari separuh
-    penduduk tinggal di Pulau Jawa, dan tujuh dari sepuluh penduduk berusia produktif.</p>
-    <div class="panel">
-      <h2>Sepuluh provinsi terbesar</h2>
-      <p class="lede">Klik judul kolom untuk mengurutkan tabel.</p>
-      <table>
-        <thead><tr>
-          <th>#</th>
-          <th class="sortable" data-sort="name">Provinsi${arrow("name")}</th>
-          <th>Ibu kota</th>
-          <th class="num sortable" data-sort="population">Penduduk (jt)${arrow("population")}</th>
-          <th class="num sortable" data-sort="share">Pangsa${arrow("share")}</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      ${sourceLine("BPS, Sensus Penduduk 2020")}
+  <h1>Population</h1>
+  <p class="lede">281.6 million people in 2024, growing 1.1% a year. Java holds 56% of the
+     population on 7% of the land; the median age is 30.1 years.</p>
+  <div class="grid-2">
+    <section class="card">
+      <p class="chart-title">Population, 2015–2024</p>
+      <p class="chart-sub">Million people · ${SOURCES.population}</p>
+      ${barChart(YEARS.map(String), SERIES.population.values, { label: 'Population by year', highlight: 9 })}
+    </section>
+    <section class="card">
+      <p class="chart-title">Age structure, 2024</p>
+      <p class="chart-sub">Share of population by age group · ${SOURCES.population}</p>
+      ${pyramidChart(AGE_GROUPS, { label: 'Age structure pyramid' })}
+      <p class="source-note">Working-age population (15–64): <b>68.9%</b> · Children (0–14): <b>24.5%</b> · 65 and over: <b>6.5%</b></p>
+    </section>
+  </div>
+  <section class="card">
+    <h2>Provinces, 2024</h2>
+    <div class="controls">
+      <label for="province-search">Search provinces</label>
+      <input type="search" id="province-search" placeholder="Type a province name…" value="${state.provinceQuery || ''}">
+      <span class="table-note" id="province-count">${list.length} of ${PROVINCES.length} provinces shown</span>
     </div>
-    <div class="panel">
-      <h2>Profil provinsi</h2>
-      <div class="controls">
-        <label class="ctl-label" for="prov-select">Pilih provinsi:</label>
-        <select id="prov-select">${options}</select>
-      </div>
-      <p><strong>${selected.name}</strong> — ibu kota ${selected.capital} — berpenduduk
-      <strong>${String(selected.population).replace(".", ",")} juta jiwa</strong>,
-      atau <strong>${String(Math.round(provinceShare(selected) * 10) / 10).replace(".", ",")}%</strong>
-      dari seluruh penduduk Indonesia pada Sensus 2020.</p>
-      ${sourceLine("BPS, Sensus Penduduk 2020")}
-    </div>
-    <div class="panel">
-      <h2>Struktur umur, 2020</h2>
-      ${age}
-      ${sourceLine("BPS, Sensus Penduduk 2020")}
-    </div>`;
+    <div class="table-wrap"><table class="data">
+      <thead><tr>
+        <th>${sortBtn('name', 'Province')}</th>
+        <th class="num">${sortBtn('pop', 'Population (m)')}</th>
+        <th class="num">${sortBtn('area', 'Area (km²)')}</th>
+        <th class="num">${sortBtn('density', 'Density /km²')}</th>
+        <th class="num">${sortBtn('growth', 'Growth /yr')}</th>
+      </tr></thead>
+      <tbody>${provinceRows(list) || `<tr><td colspan="5">No province matches “${state.provinceQuery}”.</td></tr>`}</tbody>
+    </table></div>
+    <p class="source-note">Source: <b>${SOURCES.population}</b>. Density = population ÷ land area. Figures rounded.</p>
+  </section>`;
 }
 
-function seriesTable(title, rows, unit) {
-  const body = rows
-    .map(
-      (r) =>
-        `<tr><td>${r.period}</td><td class="num">${String(r.value).replace(".", ",")}${unit}</td></tr>`,
-    )
-    .join("");
-  return `<div class="panel"><h2>${title}</h2><table>
-    <thead><tr><th>Periode</th><th class="num">Nilai</th></tr></thead><tbody>${body}</tbody></table></div>`;
-}
-
-function renderPrices() {
-  const points = INFLATION.map((p) => ({ label: String(p.year), value: p.value }));
-  const chart =
-    priceChart === "line"
-      ? lineChart(points, { label: "Inflasi Desember, persen y-on-y" })
-      : barChart(points, { label: "Inflasi Desember, persen y-on-y" });
+export function economyPage(state) {
+  const range = state.economyRange || '10y';
+  const n = range === '5y' ? 5 : 10;
+  const years = YEARS.slice(-n).map(String);
   return `
-    <p class="kicker">Harga &amp; Tenaga Kerja · Prices &amp; Labour</p>
-    <h1>Harga dan tenaga kerja</h1>
-    <p class="lede">Inflasi Desember 2024 sebesar 1,57% — terendah dalam enam tahun —
-    sementara pengangguran Februari 2025 turun ke 4,76%.</p>
-    <div class="panel">
-      <h2>Inflasi Desember, 2019–2024</h2>
-      <div class="controls" role="group" aria-label="Jenis grafik">
-        <span class="ctl-label">Tampilan:</span>
-        <button type="button" data-chart="bar" class="${priceChart === "bar" ? "on" : ""}">Batang</button>
-        <button type="button" data-chart="line" class="${priceChart === "line" ? "on" : ""}">Garis</button>
-      </div>
-      ${chart}
-      ${sourceLine("BPS, inflasi IHK Desember y-on-y")}
-      <p class="note">Inflasi melonjak ke 5,51% pada 2022 setelah penyesuaian harga BBM
-      bersubsidi, lalu mereda ke 2,61% pada 2023 dan 1,57% pada 2024.</p>
+  <h1>Economy</h1>
+  <p class="lede">GDP of Rp 22,139 trillion in 2024 (US$ 1.40 trillion), growing 5.03%.
+     Manufacturing is the largest sector; exports of US$ 264.7 billion left a US$ 31.0 billion trade surplus.</p>
+  <div class="controls">
+    <label>Growth chart range</label>
+    <div class="seg" role="group" aria-label="Chart range">
+      <button data-range="5y" aria-pressed="${range === '5y'}">Last 5 years</button>
+      <button data-range="10y" aria-pressed="${range === '10y'}">Last 10 years</button>
     </div>
-    ${seriesTable("Tingkat pengangguran terbuka", UNEMPLOYMENT, "%")}
-    ${sourceLine("BPS")}
-    ${seriesTable("Penduduk miskin", POVERTY, "%")}
-    ${sourceLine("BPS")}
-    <div class="panel">
-      <h2>Upah minimum</h2>
-      <p>Upah minimum provinsi tertinggi 2025 adalah <strong>DKI Jakarta:
-      Rp5.396.761</strong> per bulan.</p>
-      ${sourceLine("Pemprov DKI Jakarta, 2025")}
-    </div>`;
+  </div>
+  <div class="grid-2">
+    <section class="card">
+      <p class="chart-title">Real GDP growth, ${years[0]}–${years[years.length - 1]}</p>
+      <p class="chart-sub">% year on year · ${SOURCES.gdp}</p>
+      ${lineChart(years, SERIES.gdpGrowth.values.slice(-n), { label: 'GDP growth' })}
+      <p class="source-note">The 2020 contraction (−2.07%) is the only fall in the series, caused by the pandemic.</p>
+    </section>
+    <section class="card">
+      <p class="chart-title">GDP by sector, 2024</p>
+      <p class="chart-sub">Share of GDP at current prices · ${SOURCES.gdp}</p>
+      ${donutChart(SECTORS, { label: 'GDP by sector', centre: '100%', centreSub: 'of GDP' })}
+    </section>
+  </div>
+  <div class="grid-2">
+    <section class="card">
+      <p class="chart-title">GDP per capita, 2015–2024</p>
+      <p class="chart-sub">US$ · ${SOURCES.worldBank}</p>
+      ${barChart(YEARS.map(String), SERIES.gdpPerCapita.values, { label: 'GDP per capita by year', highlight: 9 })}
+    </section>
+    <section class="card">
+      <h2>Foreign trade, 2024</h2>
+      <dl class="stat-list">
+        <div><dt>Exports</dt><dd>US$ 264.7 bn</dd></div>
+        <div><dt>Imports</dt><dd>US$ 233.7 bn</dd></div>
+        <div><dt>Trade surplus</dt><dd>US$ 31.0 bn</dd></div>
+        <div><dt>Largest export partner</dt><dd>China (25.6%)</dd></div>
+        <div><dt>Top export</dt><dd>Coal</dd></div>
+        <div><dt>GDP at current prices</dt><dd>Rp 22,139 tn</dd></div>
+      </dl>
+      <p class="source-note">Source: <b>${SOURCES.trade}</b>. Top exports: ${TRADE.topExports.join(', ')}.</p>
+      <h3>Exports by destination</h3>
+      ${hbarChart(TRADE.partners.map((p) => ({ name: p.country, share: p.share })), { label: 'Exports by destination' })}
+    </section>
+  </div>`;
 }
 
-function indicatorRows(query) {
-  const q = query.trim().toLowerCase();
-  const rows = INDICATORS.filter(
-    (r) =>
-      q === "" ||
-      r.indicator.toLowerCase().includes(q) ||
-      r.value.toLowerCase().includes(q) ||
-      r.source.toLowerCase().includes(q) ||
-      r.year.toLowerCase().includes(q),
-  );
-  if (rows.length === 0) {
-    return `<p class="empty">Tidak ada indikator yang cocok. Coba kata kunci lain, misalnya “inflasi” atau “BPS”.</p>`;
-  }
-  return `<table><thead><tr><th>Indikator</th><th>Nilai</th><th>Tahun</th><th>Sumber</th></tr></thead><tbody>${rows
-    .map((r) => `<tr><td>${r.indicator}</td><td>${r.value}</td><td>${r.year}</td><td>${r.source}</td></tr>`)
-    .join("")}</tbody></table>`;
-}
-
-function downloadCsv() {
-  const lines = ["Indikator;Nilai;Tahun;Sumber"];
-  for (const r of INDICATORS) {
-    lines.push([r.indicator, r.value, r.year, r.source].join(";"));
-  }
-  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "indikator-indonesia.csv";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function renderData() {
+export function pricesPage(state) {
+  const view = state.pricesView || 'annual';
   return `
-    <p class="kicker">Data &amp; Metode · Data &amp; Methods</p>
-    <h1>Data dan metode</h1>
-    <p class="lede">Seluruh indikator yang dipakai situs ini, lengkap dengan nilai,
-    tahun, dan sumbernya. Gunakan kotak cari untuk menyaring, atau unduh semuanya sebagai CSV.</p>
-    <div class="panel">
-      <h2>Semua indikator</h2>
-      <div class="controls">
-        <label class="ctl-label" for="indicator-search">Cari:</label>
-        <input type="search" id="indicator-search" placeholder="misalnya inflasi, PDB, BPS…" value="${indicatorQuery.replace(/"/g, "&quot;")}" aria-label="Cari indikator">
-        <button type="button" id="csv-download" class="primary">Unduh CSV</button>
-      </div>
-      <div id="indicator-table">${indicatorRows(indicatorQuery)}</div>
-      <p class="source">Unduhan berisi ${INDICATORS.length} indikator dalam format CSV (pemisah titik koma).</p>
+  <h1>Prices</h1>
+  <p class="lede">Consumer prices rose 1.57% in the year to December 2024 — the lowest annual
+     rate in the series — after five straight months of falling prices mid-year.</p>
+  <div class="controls">
+    <label>Chart</label>
+    <div class="seg" role="group" aria-label="Inflation chart">
+      <button data-prices-view="annual" aria-pressed="${view === 'annual'}">Annual, 2015–2024</button>
+      <button data-prices-view="monthly" aria-pressed="${view === 'monthly'}">Monthly, 2024</button>
     </div>
-    <div class="panel">
-      <h2>Metode dan sumber</h2>
-      <p>Angka-angka di situs ini berasal dari publikasi resmi: Badan Pusat Statistik (BPS)
-      untuk penduduk, PDB, inflasi, pengangguran, kemiskinan, dan perdagangan; Bank Indonesia
-      untuk cadangan devisa; World Bank untuk angka harapan hidup; dan pemerintah provinsi
-      untuk upah minimum. Tahun dan sumber dicantumkan pada setiap angka.</p>
-      <p>Situs ini statis: semua data tersimpan dalam berkas <code>app/data.js</code> dan
-      grafik digambar di peramban sebagai SVG. Tidak ada data yang diambil dari jaringan,
-      sehingga halaman ini tetap berfungsi luring.</p>
-    </div>`;
+  </div>
+  <div class="grid-2">
+    <section class="card">
+      <p class="chart-title">${view === 'annual' ? 'Annual inflation, 2015–2024' : 'Monthly inflation, 2024'}</p>
+      <p class="chart-sub">${view === 'annual' ? '% year on year, December' : '% month on month'} · ${SOURCES.prices}</p>
+      ${view === 'annual'
+        ? lineChart(YEARS.map(String), SERIES.inflation.values, { label: 'Annual inflation' })
+        : barChart(MONTHLY_INFLATION_2024.map((m) => m.month), MONTHLY_INFLATION_2024.map((m) => m.value), { label: 'Monthly inflation 2024' })}
+      <p class="source-note">${view === 'annual'
+        ? 'The 2022 spike (5.51%) followed the administered fuel price rise in September 2022.'
+        : 'Five consecutive monthly falls from May to September 2024 pulled the annual rate down to 1.57%.'}</p>
+    </section>
+    <section class="card">
+      <h2>CPI basket, 2024</h2>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Expenditure group</th><th class="num">Weight (%)</th><th class="num">Annual change (%)</th></tr></thead>
+        <tbody>${CPI_BASKET.map((c) => `<tr><td>${c.group}</td><td class="num">${fmt(c.weight)}</td><td class="num">${fmt(c.annual, 1)}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <p class="source-note">Source: <b>${SOURCES.prices}</b>. Food carries the largest weight in the basket at 27.0%.</p>
+      <div class="callout"><b>What moved prices in 2024:</b> food prices eased after the harvest, while
+      administered prices (fuel, electricity) were held flat for most of the year.</div>
+    </section>
+  </div>`;
 }
 
-const PAGES = {
-  "": renderOverview,
-  ekonomi: renderEconomy,
-  penduduk: renderPopulation,
-  "harga-tenaga-kerja": renderPrices,
-  data: renderData,
-};
-
-function render() {
-  const current = route();
-  const page = PAGES[current] || renderOverview;
-  setActiveNav(current in PAGES ? current : "");
-  mount.innerHTML = page();
-  window.scrollTo(0, 0);
-
-  for (const btn of mount.querySelectorAll("[data-range]")) {
-    btn.addEventListener("click", () => {
-      econFrom = Number(btn.getAttribute("data-range"));
-      render();
-    });
-  }
-  for (const btn of mount.querySelectorAll("[data-chart]")) {
-    btn.addEventListener("click", () => {
-      priceChart = btn.getAttribute("data-chart") || "bar";
-      render();
-    });
-  }
-  for (const th of mount.querySelectorAll("[data-sort]")) {
-    th.addEventListener("click", () => {
-      const key = th.getAttribute("data-sort") || "population";
-      if (provinceSort.key === key) {
-        provinceSort = { key, dir: -provinceSort.dir };
-      } else {
-        provinceSort = { key, dir: key === "name" ? 1 : -1 };
-      }
-      render();
-    });
-  }
-  const select = mount.querySelector("#prov-select");
-  if (select) {
-    select.addEventListener("change", () => {
-      selectedProvince = select.value;
-      render();
-    });
-  }
-  const search = mount.querySelector("#indicator-search");
-  if (search) {
-    search.addEventListener("input", () => {
-      indicatorQuery = search.value;
-      const table = mount.querySelector("#indicator-table");
-      if (table) table.innerHTML = indicatorRows(indicatorQuery);
-    });
-  }
-  const csv = mount.querySelector("#csv-download");
-  if (csv) csv.addEventListener("click", downloadCsv);
+export function labourPage() {
+  return `
+  <h1>Labour</h1>
+  <p class="lede">149.4 million people in the labour force in August 2024; 144.6 million were
+     working and 7.3 million were unemployed — an open unemployment rate of 4.91%, the lowest since 1998.</p>
+  <div class="grid-2">
+    <section class="card">
+      <p class="chart-title">Open unemployment rate, 2015–2024</p>
+      <p class="chart-sub">% of labour force, August · ${SOURCES.labour}</p>
+      ${lineChart(YEARS.map(String), SERIES.unemployment.values, { label: 'Unemployment rate by year' })}
+      <p class="source-note">The 2020 jump to 7.07% is the pandemic peak; the rate has fallen every year since.</p>
+    </section>
+    <section class="card">
+      <p class="chart-title">Employment by sector, Aug 2024</p>
+      <p class="chart-sub">Share of workers · ${SOURCES.labour}</p>
+      ${hbarChart(EMPLOYMENT.map((e) => ({ name: e.sector, share: e.share })), { label: 'Employment by sector' })}
+    </section>
+  </div>
+  <div class="grid-2">
+    <section class="card">
+      <h2>Labour force, August 2024</h2>
+      <dl class="stat-list">
+        <div><dt>Labour force</dt><dd>149.4 million</dd></div>
+        <div><dt>Employed</dt><dd>144.6 million</dd></div>
+        <div><dt>Unemployed</dt><dd>7.3 million</dd></div>
+        <div><dt>Labour force participation</dt><dd>70.6%</dd></div>
+        <div><dt>Informal workers</dt><dd>59.2% of workers</dd></div>
+        <div><dt>Underemployment</dt><dd>9.7 million</dd></div>
+      </dl>
+      <p class="source-note">Source: <b>${SOURCES.labour}</b>.</p>
+    </section>
+    <section class="card">
+      <h2>Human development, 2024</h2>
+      <dl class="stat-list">
+        <div><dt>Human Development Index</dt><dd>${fmt(HUMAN_DEV.hdi, 2)}</dd></div>
+        <div><dt>Life expectancy</dt><dd>${fmt(HUMAN_DEV.lifeExpectancy, 2)} years</dd></div>
+        <div><dt>Mean years of schooling</dt><dd>${fmt(HUMAN_DEV.meanSchooling, 1)} years</dd></div>
+        <div><dt>Expected years of schooling</dt><dd>${fmt(HUMAN_DEV.expectedSchooling, 1)} years</dd></div>
+        <div><dt>GNI per capita (PPP)</dt><dd>US$ ${HUMAN_DEV.gniPerCapita.toLocaleString('en-US')}</dd></div>
+        <div><dt>Poverty rate</dt><dd>9.03% (Mar 2024)</dd></div>
+      </dl>
+      <p class="source-note">Source: <b>${SOURCES.hdi}</b>; poverty: <b>${SOURCES.poverty}</b>.</p>
+    </section>
+  </div>`;
 }
 
-export function startRouter() {
-  window.addEventListener("hashchange", render);
-  render();
+export function dataPage(state) {
+  const indicator = state.explorerIndicator || 'population';
+  const s = SERIES[indicator];
+  const q = (state.explorerQuery || '').toLowerCase();
+  const list = PROVINCES.filter((p) => p.name.toLowerCase().includes(q));
+  return `
+  <h1>Data explorer</h1>
+  <p class="lede">Every series on this site, as tables you can sort, search and download.
+     Figures are the published headline values; the About page lists the full sources.</p>
+  <section class="card">
+    <h2>Annual indicator</h2>
+    <div class="controls">
+      <label for="indicator-select">Indicator</label>
+      <select id="indicator-select">
+        ${Object.entries(SERIES).map(([k, v]) => `<option value="${k}" ${k === indicator ? 'selected' : ''}>${v.label} (${v.unit})</option>`).join('')}
+      </select>
+    </div>
+    ${barChart(YEARS.map(String), s.values, { label: s.label, highlight: 9 })}
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>Year</th>${YEARS.map((y) => `<th class="num">${y}</th>`).join('')}</tr></thead>
+      <tbody><tr><td>${s.label}</td>${s.values.map((v) => `<td class="num">${fmt(v, 2)}</td>`).join('')}</tr></tbody>
+    </table></div>
+    <p class="source-note">Source: <b>${s.source}</b>.</p>
+  </section>
+  <section class="card">
+    <h2>Provincial dataset, 2024</h2>
+    <div class="controls">
+      <label for="explorer-search">Search</label>
+      <input type="search" id="explorer-search" placeholder="Province name…" value="${state.explorerQuery || ''}">
+      <button id="download-csv" type="button">Download CSV</button>
+      <span class="table-note">${list.length} of ${PROVINCES.length} provinces</span>
+    </div>
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>Province</th><th class="num">Population (m)</th><th class="num">Area (km²)</th><th class="num">Density /km²</th><th class="num">Growth /yr (%)</th></tr></thead>
+      <tbody>${list.map((p) => `<tr><td>${p.name}</td><td class="num">${fmt(p.pop)}</td><td class="num">${p.area.toLocaleString('en-US')}</td><td class="num">${density(p).toLocaleString('en-US')}</td><td class="num">+${fmt(p.growth)}%</td></tr>`).join('') || `<tr><td colspan="5">No province matches “${state.explorerQuery}”.</td></tr>`}</tbody>
+    </table></div>
+    <p class="source-note">Source: <b>${SOURCES.population}</b>. The CSV download contains exactly the rows shown above.</p>
+  </section>`;
+}
+
+export function aboutPage() {
+  return `
+  <h1>Methods &amp; sources</h1>
+  <p class="lede">NusaData is an independent statistics portal. It republishes the headline
+     figures of Indonesia's official statistics with the source and reference year on every number.</p>
+  <section class="card">
+    <h2>Sources</h2>
+    <ul class="method-list">
+      <li><b>Population</b> — ${SOURCES.population}.</li>
+      <li><b>Economy</b> — ${SOURCES.gdp}.</li>
+      <li><b>Prices</b> — ${SOURCES.prices}.</li>
+      <li><b>Labour</b> — ${SOURCES.labour}.</li>
+      <li><b>Trade</b> — ${SOURCES.trade}.</li>
+      <li><b>Welfare</b> — ${SOURCES.poverty}; ${SOURCES.hdi}.</li>
+      <li><b>International comparison</b> — ${SOURCES.worldBank}.</li>
+    </ul>
+    <p class="source-note">Figures are rounded for display. Where a series was revised, the latest
+       published vintage is shown. This site is not affiliated with Statistics Indonesia (BPS) or the World Bank.</p>
+  </section>
+  <div class="grid-2">
+    <section class="card">
+      <h2>Definitions</h2>
+      <ul class="method-list">
+        <li><b>Open unemployment rate</b> — unemployed people as a share of the labour force, measured in August each year.</li>
+        <li><b>Inflation</b> — change in the Consumer Price Index; the annual figure is the December year-on-year change.</li>
+        <li><b>Real GDP growth</b> — change in GDP at constant 2010 prices, year on year.</li>
+        <li><b>Poverty rate</b> — share of the population below the national poverty line, measured in March and September.</li>
+        <li><b>Density</b> — population divided by land area, people per km².</li>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>Release calendar</h2>
+      <ul class="method-list">
+        <li><b>1st of each month</b> — Consumer Price Index</li>
+        <li><b>Early February, May, August, November</b> — Gross Domestic Product (quarterly)</li>
+        <li><b>May &amp; November</b> — Labour Force Situation (February &amp; August rounds)</li>
+        <li><b>Mid-month, monthly</b> — Foreign Trade Statistics</li>
+        <li><b>January &amp; July</b> — Poverty Statistics</li>
+      </ul>
+    </section>
+  </div>
+  <section class="card">
+    <h2>About this site</h2>
+    <p>NusaData is built as a single static site: no server, no tracking, no network requests.
+       Every chart is drawn from the datasets shipped with the site, and every table can be read
+       without JavaScript enabled for the figures themselves — the data is in the page's own files.
+       The site works offline in a desktop or phone browser.</p>
+    <p class="source-note">Built by an AI agent for make.fun's “Make the best national statistics site” bounty.</p>
+  </section>`;
 }

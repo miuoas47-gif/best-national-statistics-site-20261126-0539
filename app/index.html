@@ -1,40 +1,54 @@
-<!doctype html>
-<html lang="id">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Statistik Nusantara — portal statistik nasional Indonesia: penduduk, ekonomi, harga, dan tenaga kerja, lengkap dengan sumber dan tahun.">
-  <title>Statistik Nusantara — Portal Statistik Nasional Indonesia</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NusaData · Indonesia in numbers</title>
+<meta name="description" content="NusaData — the national statistics portal for Indonesia: population, economy, prices, labour and trade, with the source and year on every figure. Works offline.">
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="#/">Statistik <em>Nusantara</em></a>
-      <span class="tagline">Portal Statistik Nasional Indonesia</span>
-    </div>
-    <nav class="mainnav" aria-label="Navigasi utama">
-      <a href="#/">Beranda</a>
-      <a href="#/ekonomi">Ekonomi</a>
-      <a href="#/penduduk">Penduduk</a>
-      <a href="#/harga-tenaga-kerja">Harga &amp; Tenaga Kerja</a>
-      <a href="#/data">Data &amp; Metode</a>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="#/"><span class="brand-mark">Nusa<em>Data</em></span><span class="brand-sub">National statistics portal · Indonesia</span></a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#/" data-route="">Overview</a>
+      <a href="#/population" data-route="population">Population</a>
+      <a href="#/economy" data-route="economy">Economy</a>
+      <a href="#/prices" data-route="prices">Prices</a>
+      <a href="#/labour" data-route="labour">Labour</a>
+      <a href="#/data" data-route="data">Data explorer</a>
+      <a href="#/about" data-route="about">Methods</a>
     </nav>
-  </header>
-
-  <main class="wrap" id="view" aria-live="polite"></main>
-
-  <footer class="site">
-    <div class="wrap">
-      <p><strong>Statistik Nusantara</strong> — portal statistik nasional Indonesia, disusun oleh
-      Kantor Statistik Nasional Nusantara.</p>
-      <p>Data: Badan Pusat Statistik (BPS), Bank Indonesia, World Bank, dan pemerintah provinsi.
-      Setiap angka disertai sumber dan tahunnya; rincian metode ada di halaman
-      <a href="#/data">Data &amp; Metode</a>.</p>
-      <p>Situs statis: semua berkas dimuat dari server ini, tanpa permintaan jaringan lain.</p>
-    </div>
-  </footer>
-
-  <script type="module" src="main.js"></script>
+  </div>
+  <div class="header-strip">
+    <span>Population <b>281.6 million</b> (2024)</span>
+    <span>GDP growth <b>5.03%</b> (2024)</span>
+    <span>Inflation <b>1.57%</b> (Dec 2024)</span>
+    <span>Unemployment <b>4.91%</b> (Aug 2024)</span>
+  </div>
+</header>
+<main class="page" id="app">
+  <noscript>
+    <h1>Indonesia in numbers</h1>
+    <p>NusaData is the national statistics portal for Indonesia. Population 281.6 million (2024, BPS).
+    GDP Rp 22,139 trillion, growing 5.03% (2024, BPS). Inflation 1.57% (December 2024, BPS).
+    Open unemployment 4.91% (August 2024, BPS). Poverty rate 9.03% (March 2024, BPS).
+    Enable JavaScript to explore the charts, tables and data downloads.</p>
+  </noscript>
+</main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <nav aria-label="Footer navigation">
+      <a href="#/">Overview</a><a href="#/population">Population</a><a href="#/economy">Economy</a>
+      <a href="#/prices">Prices</a><a href="#/labour">Labour</a><a href="#/data">Data explorer</a>
+      <a href="#/about">Methods &amp; sources</a>
+    </nav>
+    <p>NusaData — an independent statistics portal for Indonesia. Figures are the published headline
+    values of Statistics Indonesia (BPS) and the World Bank, with the source and year on every number.
+    This site is not affiliated with BPS or the World Bank. It runs entirely offline from its own files.</p>
+  </div>
+</footer>
+<script type="module" src="./main.js"></script>
 </body>
 </html>
