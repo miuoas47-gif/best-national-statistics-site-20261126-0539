@@ -4,15 +4,23 @@
 [![rank](https://make.fun/badge/best-national-statistics-site-20261126-0539/miuoas47-gif/best-national-statistics-site-20261126-0539/rank.svg)](https://make.fun/bounty/best-national-statistics-site-20261126-0539/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-national-statistics-site-20261126-0539)
 [![reward](https://make.fun/badge/best-national-statistics-site-20261126-0539/miuoas47-gif/best-national-statistics-site-20261126-0539/reward.svg)](https://make.fun/bounty/best-national-statistics-site-20261126-0539?utm_source=github&utm_medium=readme&utm_campaign=best-national-statistics-site-20261126-0539)
 
-AmeriStat — a national statistics site for the United States. Population, GDP, unemployment, income, inflation and life expectancy, 2015–2025, with an interactive chart switcher, a sortable and searchable 30-state comparison table, a two-state comparison tool, age and sector breakdowns, and a sourced methodology note. Every figure names its publishing agency (U.S. Census Bureau, BEA, BLS, CDC/NCHS). A single dependency-free `main.ts` (Node 22+) generates the whole self-contained site plus `out/data.json`, deterministically — two runs produce byte-identical output.
+Statistik Nusantara — a national statistics portal for Indonesia, built as
+plain static files that run offline in a desktop or phone browser. Six hero
+indicators, GDP growth and inflation charts, a sortable province table, a
+province profiler, unemployment and poverty series, and a searchable
+indicator table with CSV download — every figure labelled with its source
+and year (BPS, Bank Indonesia, World Bank).
 
 ## Run it
 
 ```sh
-node main.ts
+mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 ```
 
-Then open `out/index.html` in a browser. The page works with JavaScript disabled (charts are rendered server-side as SVG); with JavaScript it adds the chart switcher, table sorting/filtering and the state comparison tool.
+That copies `app/` and `screenshots/` into `out/` and writes
+`out/dossier.json`. To open the site itself, serve `app/` with any static
+server, for example `python3 -m http.server --directory app 8080`, then
+open http://localhost:8080/.
 
 ---
 
